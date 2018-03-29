@@ -1,6 +1,7 @@
 from sklearn.base import BaseEstimator
 import numpy as np
 from kernels import mismatch_kernel, spectrum_kernel, spectrum_norm_kernel
+from kernels import substringKernel_cpp_nystrom, substringKernel_cpp
 from scipy.optimize import fmin_l_bfgs_b as lbfgs
 
 
@@ -8,12 +9,16 @@ class KLR (BaseEstimator):
     def __init__(self, lbda=1.0, kernel='spectrum_kernel', **kargs):
         self.lbda = lbda
         self.kargs = kargs
+        self.kernel_ = kernel
         if kernel == 'mismatch_kernel':
             self.kernel = mismatch_kernel
         elif kernel == 'spectrum_kernel':
             self.kernel = spectrum_kernel
         elif kernel == 'spectrum_norm_kernel':
             self.kernel = spectrum_norm_kernel
+        elif kernel == 'substring_kernel':
+            self.kernel = substringKernel_cpp_nystrom
+            self.test_kernel = substringKernel_cpp
         else:
             print ('Invalid kernel')
 
@@ -59,7 +64,10 @@ class KLR (BaseEstimator):
         return self
 
     def predict(self, X_test):
-        K = self.kernel(self.X_train, X_test, **self.kargs)
+        if self.kernel_ != 'substring_kernel':
+            K = self.kernel(self.X_train, X_test, **self.kargs)
+        else:
+            K = self.test_kernel(self.X_train, X_test, **self.kargs)
         y_pred = np.sign(np.dot(K.T, self._alpha)).astype(int)
         y_pred[y_pred < 0] = 0
         return y_pred

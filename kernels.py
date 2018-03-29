@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import itertools
 import regex
+import substring_kernel as subker
 
 
 def normalize_kernel(kernel):
@@ -82,3 +83,29 @@ def mismatch_kernel(chainsA, chainsB, k=3, m=0):
     specB = np.asarray(specB)
 
     return cosine_similarity(specA, specB)
+
+
+def substringKernel_cpp_nystrom(chainsA, chainsB, lbda=0.1, word_size=4,
+                                sample_size=100):
+    chainsA = np.atleast_1d(chainsA)
+    sample = np.random.choice(chainsA.size, sample_size, replace=False)
+    res = subker.getKernel(lbda, word_size, chainsA, chainsA[sample]).reshape(
+        [chainsA.size, sample_size])
+    mat = res[sample]
+    w, v = np.linalg.eig(mat)
+    w = w.real
+    v = v.real
+    ind = w > 1e-6
+    v1 = v[:, ind]
+    w1 = np.diag(1 / w[ind])
+    almost_inverse = v1.dot(w1.dot(np.transpose(v1)))
+    res = res.dot(almost_inverse.dot(np.transpose(res)))
+    return np.squeeze(res)
+
+
+def substringKernel_cpp(chainsA, chainsB ,lbda = 0.1, word_size = 4):
+    chainsA = np.atleast_1d(chainsA)
+    chainsB = np.atleast_1d(chainsB)
+    res = subker.getKernel(lbda, word_size, chainsA, chainsB).reshape([
+        chainsA.size, chainsB.size])
+    return np.squeeze(res)

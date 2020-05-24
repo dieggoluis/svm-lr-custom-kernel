@@ -1,1 +1,1 @@
-SVM and Logistict Regression supporting customer Kernels
+SVM and Logistict Regression supporting custom Kernels
